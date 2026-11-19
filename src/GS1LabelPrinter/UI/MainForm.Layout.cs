@@ -1,3 +1,5 @@
+using Gs1LabelPrinter.Core;
+
 namespace Gs1LabelPrinter.UI;
 
 public sealed partial class MainForm
@@ -12,7 +14,9 @@ public sealed partial class MainForm
         ClientSize = new Size(1260, 820);
         KeyPreview = true;
         AllowDrop = true;
-        Font = new Font("Segoe UI", 9.5f, FontStyle.Regular, GraphicsUnit.Point);
+        Font = L.Current == UiLanguage.Chinese
+            ? new Font("Microsoft YaHei UI", 9.5f, FontStyle.Regular, GraphicsUnit.Point)
+            : new Font("Segoe UI", 9.5f, FontStyle.Regular, GraphicsUnit.Point);
 
         try
         {
@@ -206,8 +210,8 @@ public sealed partial class MainForm
         };
         _preview.DmMoved += Preview_DmMoved;
         _preview.DmMoveCompleted += Preview_DmMoveCompleted;
-        _toolTip.SetToolTip(_preview,
-            "Перетащите DataMatrix мышью. Стрелки двигают на 1 точку, Shift+стрелки — на 10.");
+        _toolTip.SetToolTip(_preview, L.T(
+            "Перетащите DataMatrix мышью. Стрелки двигают на 1 точку, Shift+стрелки — на 10."));
 
         var layout = new TableLayoutPanel
         {
@@ -247,6 +251,7 @@ public sealed partial class MainForm
 
         var groups = new[]
         {
+            BuildLanguageGroup(),
             BuildFileGroup(),
             BuildPrinterGroup(),
             BuildPrintGroup(),
@@ -266,6 +271,37 @@ public sealed partial class MainForm
 
         panel.Controls.Add(table);
         return panel;
+    }
+
+    private GroupBox BuildLanguageGroup()
+    {
+        var group = MakeGroup("Язык интерфейса");
+        var table = MakeTable(2, 2, 72, 28);
+
+        table.Controls.Add(FieldLabel("Язык"), 0, 0);
+
+        _languageCombo = new ComboBox
+        {
+            Dock = DockStyle.Fill,
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            Margin = new Padding(0, 4, 0, 4)
+        };
+
+        foreach (var language in L.AllLanguages)
+            _languageCombo.Items.Add(L.DisplayName(language));
+
+        _languageCombo.SelectedIndexChanged += LanguageCombo_SelectedIndexChanged;
+        table.Controls.Add(_languageCombo, 1, 0);
+
+        var hint = MutedLabel("Смена языка перезапустит приложение.");
+        hint.AutoSize = false;
+        hint.Height = 22;
+        hint.Dock = DockStyle.Fill;
+        table.Controls.Add(hint, 0, 1);
+        table.SetColumnSpan(hint, 2);
+
+        group.Controls.Add(table);
+        return group;
     }
 
     private GroupBox BuildFileGroup()
@@ -291,7 +327,7 @@ public sealed partial class MainForm
             ForeColor = Color.FromArgb(95, 105, 118),
             Margin = new Padding(0, 2, 0, 6)
         };
-        _toolTip.SetToolTip(_filePathLabel, "Полный путь к выбранному файлу");
+        _toolTip.SetToolTip(_filePathLabel, L.T("Полный путь к выбранному файлу"));
         table.Controls.Add(_filePathLabel, 0, 2);
         table.SetColumnSpan(_filePathLabel, 2);
 
@@ -306,8 +342,8 @@ public sealed partial class MainForm
             MaxLength = 200
         };
         _productTextBox.TextChanged += ProductTextBox_TextChanged;
-        _toolTip.SetToolTip(_productTextBox,
-            "Эта строка печатается под DataMatrix. Можно изменить — значение запомнится для этого GTIN.");
+        _toolTip.SetToolTip(_productTextBox, L.T(
+            "Эта строка печатается под DataMatrix. Можно изменить — значение запомнится для этого GTIN."));
         table.Controls.Add(_productTextBox, 0, 4);
         table.SetColumnSpan(_productTextBox, 2);
 
@@ -336,8 +372,8 @@ public sealed partial class MainForm
             Margin = new Padding(0, 4, 8, 4)
         };
         _printerCombo.SelectedIndexChanged += PrinterCombo_SelectedIndexChanged;
-        _toolTip.SetToolTip(_printerCombo,
-            "Выберите принтер Zebra. Данные отправляются как RAW-задание ZPL.");
+        _toolTip.SetToolTip(_printerCombo, L.T(
+            "Выберите принтер Zebra. Данные отправляются как RAW-задание ZPL."));
         table.Controls.Add(_printerCombo, 0, 0);
 
         _refreshPrintersButton = MakeButton("Обновить", RefreshPrinters_Click);
@@ -579,8 +615,8 @@ public sealed partial class MainForm
 
         table.Controls.Add(FieldLabel("Переносов кода"), 0, 2);
         _codeBreaksNumeric = MakeNumeric(0, 10, S.CodeBreaks);
-        _toolTip.SetToolTip(_codeBreaksNumeric,
-            "Сколько раз перенести строку кода: 0 — без переноса, 1 — пополам, 2 — на три части.");
+        _toolTip.SetToolTip(_codeBreaksNumeric, L.T(
+            "Сколько раз перенести строку кода: 0 — без переноса, 1 — пополам, 2 — на три части."));
         table.Controls.Add(_codeBreaksNumeric, 1, 2);
 
         var breaksHint = MutedLabel("0 — нет · 1 — пополам");

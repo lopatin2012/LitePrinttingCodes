@@ -23,15 +23,17 @@ internal static class Program
 
         Application.ThreadException += (_, e) =>
         {
-            ShowFatal("Необработанная ошибка", e.Exception);
+            ShowFatal(L.T("Необработанная ошибка"), e.Exception);
         };
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
         {
             if (e.ExceptionObject is Exception ex)
-                ShowFatal("Необработанная ошибка", ex);
+                ShowFatal(L.T("Необработанная ошибка"), ex);
         };
 
         var settings = SettingsStore.Load();
+        L.Current = L.Parse(settings.Language);
+
         using var form = new MainForm(settings);
 
         var smoke = args.Length > 0 && args[0].Equals("--smoke", StringComparison.OrdinalIgnoreCase);
@@ -78,7 +80,8 @@ internal static class Program
                 $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {title}{Environment.NewLine}{ex}{Environment.NewLine}{Environment.NewLine}",
                 Encoding.UTF8);
             MessageBox.Show(
-                $"Произошла ошибка. Подробности сохранены в файле:{Environment.NewLine}{log}{Environment.NewLine}{Environment.NewLine}{ex.Message}",
+                L.F("Произошла ошибка. Подробности сохранены в файле:{0}{1}{0}{0}{2}",
+                    Environment.NewLine, log, ex.Message),
                 title, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
         catch

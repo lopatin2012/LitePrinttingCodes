@@ -1,3 +1,5 @@
+using Gs1LabelPrinter.Core;
+
 namespace Gs1LabelPrinter.UI;
 
 public sealed class PrintProgressForm : Form
@@ -12,7 +14,7 @@ public sealed class PrintProgressForm : Form
     {
         _total = Math.Max(1, total);
 
-        Text = "Печать этикеток";
+        Text = L.T("Печать этикеток");
         FormBorderStyle = FormBorderStyle.FixedDialog;
         StartPosition = FormStartPosition.CenterParent;
         MaximizeBox = false;
@@ -24,7 +26,7 @@ public sealed class PrintProgressForm : Form
 
         _statusLabel = new Label
         {
-            Text = $"Подготовка: 0 из {_total}",
+            Text = L.F("Подготовка: 0 из {0}", _total),
             AutoSize = false,
             Location = new Point(16, 16),
             Size = new Size(438, 24),
@@ -43,7 +45,7 @@ public sealed class PrintProgressForm : Form
 
         var hint = new Label
         {
-            Text = "Отмена сработает после текущей пачки этикеток.",
+            Text = L.T("Отмена сработает после текущей пачки этикеток."),
             AutoSize = false,
             Location = new Point(16, 86),
             Size = new Size(320, 32),
@@ -52,7 +54,7 @@ public sealed class PrintProgressForm : Form
 
         _cancelButton = new Button
         {
-            Text = "Отмена",
+            Text = L.T("Отмена"),
             Location = new Point(368, 92),
             Size = new Size(86, 30),
             UseVisualStyleBackColor = true
@@ -60,8 +62,8 @@ public sealed class PrintProgressForm : Form
         _cancelButton.Click += (_, _) =>
         {
             _cancelButton.Enabled = false;
-            _cancelButton.Text = "Отмена…";
-            _statusLabel.Text = "Останавливаем печать…";
+            _cancelButton.Text = L.T("Отмена…");
+            _statusLabel.Text = L.T("Останавливаем печать…");
             CancelRequested?.Invoke(this, EventArgs.Empty);
         };
 
@@ -77,7 +79,7 @@ public sealed class PrintProgressForm : Form
 
             e.Cancel = true;
             _cancelButton.Enabled = false;
-            _statusLabel.Text = "Останавливаем печать…";
+            _statusLabel.Text = L.T("Останавливаем печать…");
             CancelRequested?.Invoke(this, EventArgs.Empty);
         };
     }
@@ -110,7 +112,7 @@ public sealed class PrintProgressForm : Form
             _progressBar.Maximum = total;
 
         _progressBar.Value = Math.Clamp(done, _progressBar.Minimum, _progressBar.Maximum);
-        _statusLabel.Text = $"Печать: {done} из {total}";
+        _statusLabel.Text = L.F("Печать: {0} из {1}", done, total);
     }
 
     public void Finish(bool success, string? message)
@@ -143,7 +145,7 @@ public sealed class PrintProgressForm : Form
         if (success)
         {
             _progressBar.Value = _progressBar.Maximum;
-            _statusLabel.Text = $"Готово: {_total} из {_total}";
+            _statusLabel.Text = L.F("Готово: {0} из {1}", _total, _total);
         }
 
         Close();

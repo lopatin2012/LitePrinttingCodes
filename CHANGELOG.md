@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.0 — 2026-11-19
+
+- Added interface languages: Russian, English and Simplified Chinese.
+  The language is selectable in the app and persisted; changing it restarts the app.
+- Default language follows the OS UI language (`ru`, `en` or `zh`).
+- Job files now use the neutral `Job_` prefix and an English technical header.
+  Existing `Задание_` files and Russian metadata are still read and appended.
+- The file path is shown as a file name; the job folder shows `~` instead of the
+  full user profile path. Full paths remain in tooltips.
+- Added banner and localized screenshots for the README.
+
 ## 1.1.0 — 2026-11-19
 
 - Added configurable line breaks for the human-readable code text

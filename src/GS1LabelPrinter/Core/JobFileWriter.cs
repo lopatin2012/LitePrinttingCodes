@@ -30,7 +30,7 @@ public sealed class JobFileWriter : IDisposable
 
         var product = Sanitize(CodeFileParser.MakeShortProductName(file.FullProductName));
         if (string.IsNullOrWhiteSpace(product))
-            product = "без названия";
+            product = Sanitize(L.T("Без названия"));
 
         var key = !string.IsNullOrWhiteSpace(file.Gtin)
             ? file.Gtin.Trim()
@@ -47,18 +47,22 @@ public sealed class JobFileWriter : IDisposable
             {
                 // Если задание уже создавалось (возможно, с другой короткой надписью),
                 // продолжаем именно его, а не создаём второй файл для того же GTIN.
-                var exact = Path.Combine(directory, $"Задание_{key}.txt");
-                if (File.Exists(exact))
-                    return exact;
+                // Job_ — новый нейтральный префикс; Задание_ — старые файлы.
+                foreach (var filePrefix in new[] { "Job_", "Задание_" })
+                {
+                    var exact = Path.Combine(directory, $"{filePrefix}{key}.txt");
+                    if (File.Exists(exact))
+                        return exact;
 
-                var prefix = $"Задание_{key}_";
-                var existing = Directory
-                    .EnumerateFiles(directory, prefix + "*.txt", SearchOption.TopDirectoryOnly)
-                    .OrderBy(p => p, StringComparer.CurrentCultureIgnoreCase)
-                    .FirstOrDefault();
+                    var prefix = $"{filePrefix}{key}_";
+                    var existing = Directory
+                        .EnumerateFiles(directory, prefix + "*.txt", SearchOption.TopDirectoryOnly)
+                        .OrderBy(p => p, StringComparer.CurrentCultureIgnoreCase)
+                        .FirstOrDefault();
 
-                if (existing is not null)
-                    return existing;
+                    if (existing is not null)
+                        return existing;
+                }
             }
             catch
             {
@@ -66,7 +70,7 @@ public sealed class JobFileWriter : IDisposable
             }
         }
 
-        var name = $"Задание_{key}_{product}.txt";
+        var name = $"Job_{key}_{product}.txt";
         return Path.Combine(directory, name);
     }
 
@@ -82,7 +86,7 @@ public sealed class JobFileWriter : IDisposable
         var path = GetJobFilePath(folder, file);
         var directory = Path.GetDirectoryName(path);
         if (string.IsNullOrWhiteSpace(directory))
-            throw new IOException("Не удалось определить папку для файла задания.");
+            throw new IOException(L.T("Не удалось определить папку для файла задания."));
 
         try
         {
@@ -91,7 +95,8 @@ public sealed class JobFileWriter : IDisposable
         catch (Exception ex)
         {
             throw new IOException(
-                $"Не удалось создать папку заданий:{Environment.NewLine}{directory}{Environment.NewLine}{ex.Message}",
+                L.F("Не удалось создать папку заданий:{0}{1}{0}{2}",
+                    Environment.NewLine, directory, ex.Message),
                 ex);
         }
 
@@ -109,7 +114,8 @@ public sealed class JobFileWriter : IDisposable
         catch (Exception ex)
         {
             throw new IOException(
-                $"Не удалось открыть файл задания:{Environment.NewLine}{path}{Environment.NewLine}{ex.Message}",
+                L.F("Не удалось открыть файл задания:{0}{1}{0}{2}",
+                    Environment.NewLine, path, ex.Message),
                 ex);
         }
 
@@ -141,11 +147,11 @@ public sealed class JobFileWriter : IDisposable
 
         if (!AppendedToExisting)
         {
-            _writer.WriteLine("# GS1 Label Printer — файл задания");
-            _writer.WriteLine("# В файл построчно добавляются коды, отправленные на печать.");
-            _writer.WriteLine("# Создан: " + now.ToString("yyyy-MM-dd HH:mm:ss"));
-            _writer.WriteLine("# Источник: " + file.FilePath);
-            _writer.WriteLine("# Продукт: " + file.FullProductName);
+            _writer.WriteLine("# GS1 Label Printer — job file");
+            _writer.WriteLine("# Codes sent to the printer are appended below, one per line.");
+            _writer.WriteLine("# Created: " + now.ToString("yyyy-MM-dd HH:mm:ss"));
+            _writer.WriteLine("# Source: " + file.FilePath);
+            _writer.WriteLine("# Product: " + file.FullProductName);
             _writer.WriteLine("# GTIN: " + (file.Gtin ?? ""));
             _writer.WriteLine();
         }
@@ -155,12 +161,12 @@ public sealed class JobFileWriter : IDisposable
         }
 
         _writer.WriteLine("# ---------------------------------------------------------------");
-        _writer.WriteLine("# Печать: " + now.ToString("yyyy-MM-dd HH:mm:ss"));
-        _writer.WriteLine("# Принтер: " + printer);
-        _writer.WriteLine("# Режим: " + mode);
-        _writer.WriteLine("# Копий каждого кода: " + copies);
-        _writer.WriteLine("# Ожидается этикеток: " + expectedCodes);
-        _writer.WriteLine("# Надпись на этикетке: " + printedProduct);
+        _writer.WriteLine("# Print: " + now.ToString("yyyy-MM-dd HH:mm:ss"));
+        _writer.WriteLine("# Printer: " + printer);
+        _writer.WriteLine("# Mode: " + mode);
+        _writer.WriteLine("# Copies per code: " + copies);
+        _writer.WriteLine("# Expected labels: " + expectedCodes);
+        _writer.WriteLine("# Label text: " + printedProduct);
         _writer.WriteLine("# ---------------------------------------------------------------");
     }
 
@@ -192,7 +198,7 @@ public sealed class JobFileWriter : IDisposable
 
         try
         {
-            _writer.WriteLine("# Отправлено в этой печати: " + WrittenCodes);
+            _writer.WriteLine("# Sent in this print: " + WrittenCodes);
             if (!string.IsNullOrWhiteSpace(footer))
                 _writer.WriteLine("# " + footer.ReplaceLineEndings(" "));
             _writer.WriteLine();

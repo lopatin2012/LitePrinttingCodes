@@ -53,6 +53,11 @@ public static class SettingsStore
         settings.Label ??= new LabelSettings();
         settings.ProductLabels ??= new(StringComparer.OrdinalIgnoreCase);
 
+        if (string.IsNullOrWhiteSpace(settings.Language))
+            settings.Language = L.DetectDefaultCode();
+        else
+            settings.Language = L.ToCode(L.Parse(settings.Language));
+
         if (string.IsNullOrWhiteSpace(settings.JobFolder))
             settings.JobFolder = AppData.DefaultJobFolder;
 

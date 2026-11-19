@@ -51,8 +51,9 @@ public sealed class LabelRenderResult : IDisposable
 
         if (s.DmX < 0 || s.DmY < 0 || dmRight > s.LabelWidthDots || dmBottom > s.LabelHeightDots)
         {
-            warnings.Add(
-                $"DataMatrix выходит за пределы этикетки ({dmSize}×{dmSize} точек, правый нижний угол {dmRight},{dmBottom}).");
+            warnings.Add(L.F(
+                "DataMatrix выходит за пределы этикетки ({0}×{0} точек, правый нижний угол {1},{2}).",
+                dmSize, dmRight, dmBottom));
         }
 
         if (Text.HeightPx > 0)
@@ -61,22 +62,24 @@ public sealed class LabelRenderResult : IDisposable
             var limit = s.LabelHeightDots - s.BottomMarginDots;
             if (textBottom > limit)
             {
-                warnings.Add(
-                    $"Текст не помещается по высоте: нужен ещё {textBottom - limit} точ. Поднимите DataMatrix или уменьшите шрифт.");
+                warnings.Add(L.F(
+                    "Текст не помещается по высоте: нужен ещё {0} точ. Поднимите DataMatrix или уменьшите шрифт.",
+                    textBottom - limit));
             }
 
             if (s.TextLeftDots + Text.LogicalWidth > s.LabelWidthDots)
-                warnings.Add("Текст выходит за правую границу этикетки.");
+                warnings.Add(L.T("Текст выходит за правую границу этикетки."));
 
             if (Text.ProductOverflow)
-                warnings.Add("Надпись продукта не помещается в одну строку даже минимальным шрифтом.");
+                warnings.Add(L.T("Надпись продукта не помещается в одну строку даже минимальным шрифтом."));
 
             if (Text.CodeOverflow)
-                warnings.Add("Содержимое кода не помещается в одну строку даже минимальным шрифтом.");
+                warnings.Add(L.T("Содержимое кода не помещается в одну строку даже минимальным шрифтом."));
         }
 
         if (s.FixSymbolSize && SymbolSize > 49)
-            warnings.Add($"Символ {SymbolSize}×{SymbolSize} больше 49 модулей — размер не фиксируется в ZPL.");
+            warnings.Add(L.F(
+                "Символ {0}×{0} больше 49 модулей — размер не фиксируется в ZPL.", SymbolSize));
 
         var textLeft = Math.Clamp(s.DmX, 0, Math.Max(0, s.LabelWidthDots - 40));
 

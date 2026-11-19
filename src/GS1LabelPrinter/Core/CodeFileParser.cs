@@ -22,7 +22,7 @@ public static class CodeFileParser
     public static LabelFile Load(string path)
     {
         if (!File.Exists(path))
-            throw new FileNotFoundException("Файл не найден.", path);
+            throw new FileNotFoundException(L.T("Файл не найден."), path);
 
         var bytes = File.ReadAllBytes(path);
         var text = DecodeText(bytes);
@@ -41,11 +41,12 @@ public static class CodeFileParser
             if (line.StartsWith('#'))
             {
                 // Комментарии файла задания; заодно читаем метаданные для повторной печати.
-                if (TryReadMetadata(line, "# Продукт:", out var productValue))
+                if (TryReadMetadata(line, new[] { "# Продукт:", "# Product:" }, out var productValue))
                     metadataProduct = productValue;
-                else if (TryReadMetadata(line, "# GTIN:", out var gtinValue))
+                else if (TryReadMetadata(line, new[] { "# GTIN:" }, out var gtinValue))
                     metadataGtin = gtinValue;
-                else if (TryReadMetadata(line, "# Ожидается этикеток:", out var qtyValue) &&
+                else if (TryReadMetadata(line,
+                             new[] { "# Ожидается этикеток:", "# Expected labels:" }, out var qtyValue) &&
                          int.TryParse(qtyValue, out var qtyMeta) && qtyMeta > 0)
                     metadataQuantity = qtyMeta;
 
@@ -61,7 +62,7 @@ public static class CodeFileParser
 
         if (codes.Count == 0)
             throw new InvalidDataException(
-                "В файле нет ни одного кода. Ожидается обычный текст: один GS1-код в строке.");
+                L.T("В файле нет ни одного кода. Ожидается обычный текст: один GS1-код в строке."));
 
         var fileName = Path.GetFileName(path);
         var stem = Path.GetFileNameWithoutExtension(path);
@@ -94,7 +95,7 @@ public static class CodeFileParser
             declaredQty = metadataQuantity;
 
         if (string.IsNullOrWhiteSpace(fullName))
-            fullName = "Без названия";
+            fullName = L.T("Без названия");
 
         return new LabelFile
         {
@@ -107,14 +108,19 @@ public static class CodeFileParser
         };
     }
 
-    private static bool TryReadMetadata(string line, string prefix, out string value)
+    private static bool TryReadMetadata(string line, IEnumerable<string> prefixes, out string value)
     {
-        value = "";
-        if (!line.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            return false;
+        foreach (var prefix in prefixes)
+        {
+            if (!line.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                continue;
 
-        value = line[prefix.Length..].Trim();
-        return true;
+            value = line[prefix.Length..].Trim();
+            return true;
+        }
+
+        value = "";
+        return false;
     }
 
     private static string DecodeText(byte[] bytes)

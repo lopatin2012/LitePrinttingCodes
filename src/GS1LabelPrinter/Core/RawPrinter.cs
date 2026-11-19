@@ -74,9 +74,9 @@ public static class RawPrinter
     public static void SendRaw(string printerName, byte[] data, string jobName = "GS1 DataMatrix")
     {
         if (string.IsNullOrWhiteSpace(printerName))
-            throw new ArgumentException("Принтер не выбран.", nameof(printerName));
+            throw new ArgumentException(L.T("Принтер не выбран."), nameof(printerName));
         if (data is null || data.Length == 0)
-            throw new ArgumentException("Нет данных для печати.", nameof(data));
+            throw new ArgumentException(L.T("Нет данных для печати."), nameof(data));
 
         IntPtr printer = IntPtr.Zero;
         var docStarted = false;
@@ -86,7 +86,7 @@ public static class RawPrinter
         try
         {
             if (!OpenPrinter(printerName, out printer, IntPtr.Zero))
-                throw Win32("Не удалось открыть принтер");
+                throw Win32(L.T("Не удалось открыть принтер"));
 
             var docInfo = new DocInfo1
             {
@@ -96,11 +96,11 @@ public static class RawPrinter
             };
 
             if (StartDocPrinter(printer, 1, ref docInfo) == 0)
-                throw Win32("Не удалось создать задание печати");
+                throw Win32(L.T("Не удалось создать задание печати"));
             docStarted = true;
 
             if (!StartPagePrinter(printer))
-                throw Win32("Не удалось начать страницу");
+                throw Win32(L.T("Не удалось начать страницу"));
             pageStarted = true;
 
             unmanaged = Marshal.AllocHGlobal(data.Length);
@@ -115,11 +115,11 @@ public static class RawPrinter
                         data.Length - offset,
                         out var written))
                 {
-                    throw Win32("Ошибка отправки данных на принтер");
+                    throw Win32(L.T("Ошибка отправки данных на принтер"));
                 }
 
                 if (written <= 0)
-                    throw new IOException("Принтер не принял данные (WritePrinter вернул 0 байт).");
+                    throw new IOException(L.T("Принтер не принял данные (WritePrinter вернул 0 байт)."));
 
                 offset += written;
             }
@@ -141,6 +141,8 @@ public static class RawPrinter
     private static Win32Exception Win32(string message)
     {
         var code = Marshal.GetLastWin32Error();
-        return new Win32Exception(code, $"{message}. Код Windows: {code}. {new Win32Exception(code).Message}");
+        return new Win32Exception(code, L.F(
+            "{0}. Код Windows: {1}. {2}",
+            message, code, new Win32Exception(code).Message));
     }
 }

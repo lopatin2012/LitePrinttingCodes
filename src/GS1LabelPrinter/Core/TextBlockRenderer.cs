@@ -89,8 +89,12 @@ public static class TextBlockRenderer
 
             if (productText.Length > 0)
             {
+                var productFamily = ContainsCjk(productText)
+                    ? "Microsoft YaHei UI"
+                    : ProductFontFamily;
+
                 productFont = FitFont(
-                    measureGraphics, productText, ProductFontFamily, FontStyle.Bold,
+                    measureGraphics, productText, productFamily, FontStyle.Bold,
                     settings.ProductFontPx, logicalWidth,
                     out productShrunk, out productOverflow);
             }
@@ -213,6 +217,17 @@ public static class TextBlockRenderer
             font.Dispose();
             size = Math.Max(MinFontPx, size - 0.5f);
         }
+    }
+
+    private static bool ContainsCjk(string text)
+    {
+        foreach (var ch in text)
+        {
+            if (ch is >= '\u3400' and <= '\u9FFF' or >= '\uF900' and <= '\uFAFF')
+                return true;
+        }
+
+        return false;
     }
 
     private static Font FitFontForLines(

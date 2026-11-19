@@ -81,9 +81,13 @@ public sealed class LabelPreviewControl : Control
         var oy = transform.OriginY;
 
         var infoRect = new Rectangle(OuterPadding, 4, Width - OuterPadding * 2, TopInfoHeight - 4);
-        var dimsText =
-            $"{s.LabelWidthDots} × {s.LabelHeightDots} точек   ·   " +
-            $"{s.DotsToMm(s.LabelWidthDots):0.#} × {s.DotsToMm(s.LabelHeightDots):0.#} мм при {s.Dpi} dpi";
+        var dimsText = L.F(
+            "{0} × {1} точек   ·   {2:0.#} × {3:0.#} мм при {4} dpi",
+            s.LabelWidthDots,
+            s.LabelHeightDots,
+            s.DotsToMm(s.LabelWidthDots),
+            s.DotsToMm(s.LabelHeightDots),
+            s.Dpi);
         TextRenderer.DrawText(g, dimsText, Font, infoRect, Color.FromArgb(90, 100, 112),
             TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
 
@@ -169,7 +173,7 @@ public sealed class LabelPreviewControl : Control
             (int)(labelRect.Y + labelRect.Height / 2 - 22),
             (int)labelRect.Width,
             24);
-        TextRenderer.DrawText(g, "Откройте файл с кодами", Font,
+        TextRenderer.DrawText(g, L.T("Откройте файл с кодами"), Font,
             titleRect, Color.FromArgb(70, 80, 95),
             TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
 
@@ -179,7 +183,7 @@ public sealed class LabelPreviewControl : Control
             (int)labelRect.Width,
             22);
         using var small = new Font(Font.FontFamily, Math.Max(8f, Font.Size - 1f));
-        TextRenderer.DrawText(g, "Один GS1-код в строке · можно перетащить файл в окно", small,
+        TextRenderer.DrawText(g, L.T("Один GS1-код в строке · можно перетащить файл в окно"), small,
             hintRect, Color.FromArgb(125, 135, 148),
             TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
     }

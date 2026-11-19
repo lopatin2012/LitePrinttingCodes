@@ -16,6 +16,7 @@ public sealed partial class MainForm : Form
     private ToolStripStatusLabel _statusLabel = null!;
     private LabelPreviewControl _preview = null!;
 
+    private ComboBox _languageCombo = null!;
     private ComboBox _printerCombo = null!;
     private Button _refreshPrintersButton = null!;
     private Label _printerInfoLabel = null!;
@@ -75,6 +76,8 @@ public sealed partial class MainForm : Form
         _settings.Label = S;
 
         BuildUi();
+        LocalizeStaticUi(this);
+
         _rebuildTimer = new System.Windows.Forms.Timer { Interval = 130 };
         _rebuildTimer.Tick += RebuildTimer_Tick;
 
@@ -92,6 +95,63 @@ public sealed partial class MainForm : Form
         string.IsNullOrWhiteSpace(_settings.JobFolder)
             ? AppData.DefaultJobFolder
             : _settings.JobFolder;
+
+    private static string DisplayPath(string path)
+    {
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (!string.IsNullOrWhiteSpace(home) &&
+            path.StartsWith(home, StringComparison.OrdinalIgnoreCase))
+        {
+            return "~" + path[home.Length..];
+        }
+
+        return path;
+    }
+
+    private static void LocalizeStaticUi(Control root)
+    {
+        if (root is Form or Label or ButtonBase or GroupBox)
+        {
+            if (!string.IsNullOrWhiteSpace(root.Text))
+                root.Text = L.T(root.Text);
+        }
+
+        if (root is ToolStrip strip)
+        {
+            foreach (ToolStripItem item in strip.Items)
+            {
+                if (!string.IsNullOrWhiteSpace(item.Text))
+                    item.Text = L.T(item.Text);
+            }
+        }
+
+        foreach (Control child in root.Controls)
+            LocalizeStaticUi(child);
+    }
+
+    private void LanguageCombo_SelectedIndexChanged(object? sender, EventArgs e)
+    {
+        if (_updatingUi)
+            return;
+
+        var language = _languageCombo.SelectedIndex switch
+        {
+            1 => UiLanguage.English,
+            2 => UiLanguage.Chinese,
+            _ => UiLanguage.Russian
+        };
+
+        if (language == L.Current)
+            return;
+
+        _settings.Language = L.ToCode(language);
+        if (_file is not null)
+            _settings.LastFilePath = _file.FilePath;
+
+        SettingsStore.Save(_settings);
+        L.Current = language;
+        Application.Restart();
+    }
 
     private string? SelectedPrinter
     {
@@ -239,6 +299,9 @@ public sealed partial class MainForm : Form
 
             _saveJobCheck.Checked = _settings.SaveJobFiles;
 
+            var languageIndex = Array.IndexOf(L.AllLanguages, L.Current);
+            _languageCombo.SelectedIndex = languageIndex >= 0 ? languageIndex : 0;
+
             _preview.ZoomPercent = _settings.PreviewZoomPercent;
         }
         finally
@@ -262,7 +325,7 @@ public sealed partial class MainForm : Form
 
             if (printers.Count == 0)
             {
-                items.Add("(принтеры не найдены)");
+                items.Add(L.T("(принтеры не найдены)"));
                 index = 0;
             }
             else
@@ -289,7 +352,7 @@ public sealed partial class MainForm : Form
 
                 if (index < 0)
                 {
-                    items.Insert(0, "(выберите принтер)");
+                    items.Insert(0, L.T("(выберите принтер)"));
                     index = 0;
                 }
             }
@@ -313,13 +376,13 @@ public sealed partial class MainForm : Form
         var printer = SelectedPrinter;
         if (printer is null)
         {
-            _printerInfoLabel.Text =
-                "Принтер не выбран. Установите драйвер ZDesigner ZD421 (ZPL) и нажмите «Обновить».";
+            _printerInfoLabel.Text = L.T(
+                "Принтер не выбран. Установите драйвер ZDesigner ZD421 (ZPL) и нажмите «Обновить».");
             _printerInfoLabel.ForeColor = Color.FromArgb(180, 50, 40);
             return;
         }
 
-        _printerInfoLabel.Text = "RAW-задание ZPL → " + printer;
+        _printerInfoLabel.Text = L.F("RAW-задание ZPL → {0}", printer);
         _printerInfoLabel.ForeColor = Color.FromArgb(80, 120, 85);
     }
 
@@ -340,7 +403,7 @@ public sealed partial class MainForm : Form
 
         using var dialog = new FolderBrowserDialog
         {
-            Description = "Папка для TXT-файлов заданий",
+            Description = L.T("Папка для TXT-файлов заданий"),
             ShowNewFolderButton = true
         };
 
@@ -370,9 +433,9 @@ public sealed partial class MainForm : Form
         {
             MessageBox.Show(
                 this,
-                "Не удалось открыть папку заданий." + Environment.NewLine + Environment.NewLine +
+                L.T("Не удалось открыть папку заданий.") + Environment.NewLine + Environment.NewLine +
                 JobFolder + Environment.NewLine + Environment.NewLine + ex.Message,
-                "Папка заданий",
+                L.T("Папка заданий"),
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Warning);
         }
@@ -383,12 +446,12 @@ public sealed partial class MainForm : Form
         _chooseJobFolderButton.Enabled = _settings.SaveJobFiles;
         _openJobFolderButton.Enabled = true;
 
-        _jobFolderLabel.Text = "Папка: " + JobFolder;
+        _jobFolderLabel.Text = L.F("Папка: {0}", DisplayPath(JobFolder));
         _toolTip.SetToolTip(_jobFolderLabel, JobFolder);
 
         if (!_settings.SaveJobFiles)
         {
-            _jobStateLabel.Text = "Сохранение файла задания отключено.";
+            _jobStateLabel.Text = L.T("Сохранение файла задания отключено.");
             _jobStateLabel.ForeColor = Color.FromArgb(150, 100, 40);
             _jobPathLabel.Text = "";
             _toolTip.SetToolTip(_jobPathLabel, null);
@@ -397,7 +460,7 @@ public sealed partial class MainForm : Form
 
         if (_file is null)
         {
-            _jobStateLabel.Text = "Файл задания появится после загрузки файла с кодами.";
+            _jobStateLabel.Text = L.T("Файл задания появится после загрузки файла с кодами.");
             _jobStateLabel.ForeColor = Color.FromArgb(95, 105, 118);
             _jobPathLabel.Text = "";
             _toolTip.SetToolTip(_jobPathLabel, null);
@@ -408,13 +471,13 @@ public sealed partial class MainForm : Form
         var exists = File.Exists(path);
 
         _jobStateLabel.Text = exists
-            ? "Существующий файл — новые коды будут добавлены в него."
-            : "Файл будет создан при первой печати.";
+            ? L.T("Существующий файл — новые коды будут добавлены в него.")
+            : L.T("Файл будет создан при первой печати.");
         _jobStateLabel.ForeColor = exists
             ? Color.FromArgb(35, 95, 160)
             : Color.FromArgb(95, 105, 118);
 
-        _jobPathLabel.Text = "Файл: " + Path.GetFileName(path);
+        _jobPathLabel.Text = L.F("Файл: {0}", Path.GetFileName(path));
         _jobPathLabel.ForeColor = Color.FromArgb(35, 95, 160);
         _toolTip.SetToolTip(_jobPathLabel, path);
     }
@@ -494,8 +557,8 @@ public sealed partial class MainForm : Form
     {
         using var dialog = new OpenFileDialog
         {
-            Title = "Выберите файл с GS1-кодами",
-            Filter = "Текстовые файлы (*.txt;*.csv)|*.txt;*.csv|Все файлы (*.*)|*.*",
+            Title = L.T("Выберите файл с GS1-кодами"),
+            Filter = L.T("Текстовые файлы (*.txt;*.csv)|*.txt;*.csv|Все файлы (*.*)|*.*"),
             CheckFileExists = true,
             Multiselect = false
         };
@@ -536,7 +599,7 @@ public sealed partial class MainForm : Form
             try
             {
                 _productTextBox.Text = label;
-                _filePathLabel.Text = parsed.FilePath;
+                _filePathLabel.Text = parsed.FileName;
                 _fileInfoLabel.Text = BuildFileInfo(parsed);
                 _toolTip.SetToolTip(_fileInfoLabel, _fileInfoLabel.Text);
                 _fileInfoLabel.ForeColor = parsed.DeclaredQuantity == parsed.Codes.Count
@@ -544,7 +607,7 @@ public sealed partial class MainForm : Form
                     : Color.FromArgb(185, 95, 20);
                 _codeIndexNumeric.Maximum = Math.Max(1, parsed.Codes.Count);
                 _codeIndexNumeric.Value = 1;
-                _codeCountLabel.Text = "из " + parsed.Codes.Count;
+                _codeCountLabel.Text = L.F("из {0}", parsed.Codes.Count);
             }
             finally
             {
@@ -554,29 +617,29 @@ public sealed partial class MainForm : Form
             _toolTip.SetToolTip(_filePathLabel, parsed.FilePath);
             _settings.LastFilePath = parsed.FilePath;
             _settingsDirty = true;
-            Text = "Печать GS1 DataMatrix — " + parsed.FileName;
+            Text = L.F("Печать GS1 DataMatrix — {0}", parsed.FileName);
 
             UpdatePrintButtonText();
             UpdateUiState();
             UpdateJobInfo();
             RebuildPreview();
 
-            _statusLabel.Text = $"Загружено кодов: {parsed.Codes.Count}";
+            _statusLabel.Text = L.F("Загружено кодов: {0}", parsed.Codes.Count);
             _statusLabel.ForeColor = Color.FromArgb(60, 110, 70);
         }
         catch (Exception ex)
         {
-            _statusLabel.Text = "Не удалось открыть файл: " + ex.Message;
+            _statusLabel.Text = L.F("Не удалось открыть файл: {0}", ex.Message);
             _statusLabel.ForeColor = Color.FromArgb(190, 40, 35);
 
             if (!silent)
             {
                 MessageBox.Show(
                     this,
-                    "Не удалось прочитать файл." + Environment.NewLine + Environment.NewLine +
+                    L.T("Не удалось прочитать файл.") + Environment.NewLine + Environment.NewLine +
                     ex.Message + Environment.NewLine + Environment.NewLine +
-                    "Ожидается обычный текстовый файл: один GS1-код в строке.",
-                    "Ошибка файла",
+                    L.T("Ожидается обычный текстовый файл: один GS1-код в строке."),
+                    L.T("Ошибка файла"),
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
             }
@@ -585,11 +648,11 @@ public sealed partial class MainForm : Form
 
     private static string BuildFileInfo(LabelFile file)
     {
-        var info = $"Кодов: {file.Codes.Count}";
+        var info = L.F("Кодов: {0}", file.Codes.Count);
         if (!string.IsNullOrWhiteSpace(file.Gtin))
             info += $"   ·   GTIN: {file.Gtin}";
         if (file.DeclaredQuantity != file.Codes.Count)
-            info += $"   ·   в имени файла: {file.DeclaredQuantity} (не совпадает)";
+            info += L.F("   ·   в имени файла: {0} (не совпадает)", file.DeclaredQuantity);
         return info;
     }
 
@@ -684,7 +747,7 @@ public sealed partial class MainForm : Form
             UpdateSymbolInfo();
             _preview.Invalidate();
 
-            _statusLabel.Text = "Ошибка: " + ex.Message;
+            _statusLabel.Text = L.F("Ошибка: {0}", ex.Message);
             _statusLabel.ForeColor = Color.FromArgb(190, 40, 35);
         }
     }
@@ -704,8 +767,9 @@ public sealed partial class MainForm : Form
             }
             else
             {
-                _statusLabel.Text =
-                    $"Готово · DataMatrix {_previewData.SymbolSize}×{_previewData.SymbolSize} · текст {layout.TextHeight} точ.";
+                _statusLabel.Text = L.F(
+                    "Готово · DataMatrix {0}×{0} · текст {1} точ.",
+                    _previewData.SymbolSize, layout.TextHeight);
                 _statusLabel.ForeColor = Color.FromArgb(60, 110, 70);
             }
         }
@@ -720,7 +784,7 @@ public sealed partial class MainForm : Form
         if (_previewData is null)
         {
             _symbolInfoLabel.Text = "—";
-            _dmSizeInfoLabel.Text = "Символ появится после загрузки файла.";
+            _dmSizeInfoLabel.Text = L.T("Символ появится после загрузки файла.");
             return;
         }
 
@@ -728,22 +792,26 @@ public sealed partial class MainForm : Form
         var pixels = symbol * S.ModuleSizeDots;
         var mm = S.DotsToMm(pixels);
         _symbolInfoLabel.Text = $"{symbol}×{symbol}";
-        _dmSizeInfoLabel.Text =
-            $"{symbol}×{symbol} модулей · {pixels}×{pixels} точек · {mm:0.#}×{mm:0.#} мм";
+        _dmSizeInfoLabel.Text = L.F(
+            "{0}×{0} модулей · {1}×{1} точек · {2:0.#}×{2:0.#} мм",
+            symbol, pixels, mm);
     }
 
     private void UpdateLabelSizeInfo()
     {
-        _labelSizeInfoLabel.Text =
-            $"{S.LabelWidthDots}×{S.LabelHeightDots} точек · " +
-            $"{S.DotsToMm(S.LabelWidthDots):0.#}×{S.DotsToMm(S.LabelHeightDots):0.#} мм";
+        _labelSizeInfoLabel.Text = L.F(
+            "{0}×{1} точек · {2:0.#}×{3:0.#} мм",
+            S.LabelWidthDots,
+            S.LabelHeightDots,
+            S.DotsToMm(S.LabelWidthDots),
+            S.DotsToMm(S.LabelHeightDots));
     }
 
     private void UpdateZoomLabel()
     {
         _preview.ZoomPercent = _settings.PreviewZoomPercent;
         _zoomLabel.Text = _settings.PreviewZoomPercent == 0
-            ? "вписать"
+            ? L.T("вписать")
             : _settings.PreviewZoomPercent + "%";
         _preview.Invalidate();
     }
@@ -893,8 +961,8 @@ public sealed partial class MainForm : Form
     private void UpdatePrintButtonText()
     {
         _printAllButton.Text = _file is null
-            ? "Печать всех"
-            : $"Печать всех ({_file.Codes.Count * Math.Max(1, S.Copies)})";
+            ? L.T("Печать всех")
+            : L.F("Печать всех ({0})", _file.Codes.Count * Math.Max(1, S.Copies));
     }
 
     private void UpdateUiState()
@@ -912,20 +980,20 @@ public sealed partial class MainForm : Form
 
         if (!hasPrinter)
         {
-            _printHintLabel.Text =
-                "Принтер не выбран. Установите ZDesigner ZD421 (ZPL), затем нажмите «Обновить».";
+            _printHintLabel.Text = L.T(
+                "Принтер не выбран. Установите ZDesigner ZD421 (ZPL), затем нажмите «Обновить».");
             _printHintLabel.ForeColor = Color.FromArgb(180, 50, 40);
         }
         else if (!hasFile)
         {
-            _printHintLabel.Text =
-                "Откройте файл: один GS1-код в строке. Можно перетащить файл в окно.";
+            _printHintLabel.Text = L.T(
+                "Откройте файл: один GS1-код в строке. Можно перетащить файл в окно.");
             _printHintLabel.ForeColor = Color.FromArgb(100, 110, 124);
         }
         else
         {
-            _printHintLabel.Text =
-                "Перед печатью всех будет подтверждение. Данные отправляются сразу на принтер.";
+            _printHintLabel.Text = L.T(
+                "Перед печатью всех будет подтверждение. Данные отправляются сразу на принтер.");
             _printHintLabel.ForeColor = Color.FromArgb(100, 110, 124);
         }
     }
@@ -936,7 +1004,7 @@ public sealed partial class MainForm : Form
     {
         if (_file is null)
         {
-            MessageBox.Show(this, "Сначала откройте файл с кодами.", "Печать",
+            MessageBox.Show(this, L.T("Сначала откройте файл с кодами."), L.T("Печать"),
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
@@ -953,12 +1021,16 @@ public sealed partial class MainForm : Form
 
         var answer = MessageBox.Show(
             this,
-            $"Отправить {total} этикеток на принтер?" + Environment.NewLine + Environment.NewLine +
-            $"Принтер: {printer}" + Environment.NewLine +
-            $"Файл: {_file.FileName}" + Environment.NewLine +
-            $"Кодов: {_file.Codes.Count}, копий каждого: {copies}" + Environment.NewLine + Environment.NewLine +
-            GetJobInfoForMessage(),
-            "Печать всех",
+            L.F(
+                "Отправить {0} этикеток на принтер?{1}{1}Принтер: {2}{1}Файл: {3}{1}Кодов: {4}, копий каждого: {5}{1}{1}{6}",
+                total,
+                Environment.NewLine,
+                printer,
+                _file.FileName,
+                _file.Codes.Count,
+                copies,
+                GetJobInfoForMessage()),
+            L.T("Печать всех"),
             MessageBoxButtons.YesNo,
             MessageBoxIcon.Question,
             MessageBoxDefaultButton.Button2);
@@ -967,25 +1039,27 @@ public sealed partial class MainForm : Form
             return;
 
         var indices = Enumerable.Range(0, _file.Codes.Count).ToArray();
-        RunPrint(indices, printer, "все коды");
+        RunPrint(indices, printer, L.T("все коды"));
     }
 
     private string GetJobInfoForMessage()
     {
         if (!_settings.SaveJobFiles)
-            return "Файл задания: сохранение отключено.";
+            return L.T("Файл задания: сохранение отключено.");
 
         var path = JobFileWriter.GetJobFilePath(JobFolder, _file!);
         var exists = File.Exists(path);
-        return "Файл задания:" + Environment.NewLine + path + Environment.NewLine +
-               (exists ? "(существующий — коды будут добавлены)" : "(новый — будет создан)");
+        return L.T("Файл задания:") + Environment.NewLine + path + Environment.NewLine +
+               (exists
+                   ? L.T("(существующий — коды будут добавлены)")
+                   : L.T("(новый — будет создан)"));
     }
 
     private void PrintCurrent_Click(object? sender, EventArgs e)
     {
         if (_file is null)
         {
-            MessageBox.Show(this, "Сначала откройте файл с кодами.", "Печать",
+            MessageBox.Show(this, L.T("Сначала откройте файл с кодами."), L.T("Печать"),
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
@@ -997,16 +1071,16 @@ public sealed partial class MainForm : Form
             return;
         }
 
-        RunPrint(new[] { _codeIndex }, printer, "текущий код");
+        RunPrint(new[] { _codeIndex }, printer, L.T("текущий код"));
     }
 
     private void ShowNoPrinter()
     {
         MessageBox.Show(
             this,
-            "Принтер не выбран." + Environment.NewLine + Environment.NewLine +
-            "Установите драйвер ZDesigner ZD421 (ZPL), затем нажмите «Обновить» в разделе «Принтер».",
-            "Принтер",
+            L.T("Принтер не выбран.") + Environment.NewLine + Environment.NewLine +
+            L.T("Установите драйвер ZDesigner ZD421 (ZPL), затем нажмите «Обновить» в разделе «Принтер»."),
+            L.T("Принтер"),
             MessageBoxButtons.OK,
             MessageBoxIcon.Warning);
     }
@@ -1050,7 +1124,7 @@ public sealed partial class MainForm : Form
                 catch (OperationCanceledException)
                 {
                     outcome.Cancelled = true;
-                    progressForm.Finish(false, "Печать отменена.");
+                    progressForm.Finish(false, L.T("Печать отменена."));
                 }
                 catch (Exception ex)
                 {
@@ -1075,26 +1149,27 @@ public sealed partial class MainForm : Form
 
         if (outcome.Error is not null)
         {
-            _statusLabel.Text = "Ошибка печати.";
+            _statusLabel.Text = L.T("Ошибка печати.");
             _statusLabel.ForeColor = Color.FromArgb(190, 40, 35);
 
             var jobLine = string.IsNullOrWhiteSpace(result.JobPath)
                 ? ""
-                : Environment.NewLine + "Файл задания: " + result.JobPath;
+                : Environment.NewLine + L.F("Файл задания: {0}", result.JobPath);
 
             MessageBox.Show(
                 this,
-                "Не удалось отправить данные на принтер." + Environment.NewLine + Environment.NewLine +
+                L.T("Не удалось отправить данные на принтер.") + Environment.NewLine + Environment.NewLine +
                 outcome.Error.Message + jobLine + Environment.NewLine + Environment.NewLine +
-                "Проверьте, что принтер включён, выбран ZPL-драйвер и доступен порт." + Environment.NewLine +
-                $"Уже отправлено этикеток: {sent} из {total}.",
-                "Ошибка печати",
+                L.T("Проверьте, что принтер включён, выбран ZPL-драйвер и доступен порт.") +
+                Environment.NewLine +
+                L.F("Уже отправлено этикеток: {0} из {1}.", sent, total),
+                L.T("Ошибка печати"),
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
         }
         else if (outcome.Cancelled)
         {
-            _statusLabel.Text = $"Печать отменена. Отправлено {sent} из {total}." +
+            _statusLabel.Text = L.F("Печать отменена. Отправлено {0} из {1}.", sent, total) +
                                 JobStatusSuffix(result.JobPath);
             _statusLabel.ForeColor = Color.FromArgb(185, 95, 20);
         }
@@ -1122,19 +1197,19 @@ public sealed partial class MainForm : Form
         }
         catch (Exception ex)
         {
-            _statusLabel.Text = "Ошибка печати.";
+            _statusLabel.Text = L.T("Ошибка печати.");
             _statusLabel.ForeColor = Color.FromArgb(190, 40, 35);
 
             var jobLine = string.IsNullOrWhiteSpace(result.JobPath)
                 ? ""
-                : Environment.NewLine + "Файл задания: " + result.JobPath;
+                : Environment.NewLine + L.F("Файл задания: {0}", result.JobPath);
 
             MessageBox.Show(
                 this,
-                "Не удалось отправить данные на принтер." + Environment.NewLine + Environment.NewLine +
+                L.T("Не удалось отправить данные на принтер.") + Environment.NewLine + Environment.NewLine +
                 ex.Message + jobLine + Environment.NewLine + Environment.NewLine +
-                "Проверьте, что принтер включён, выбран ZPL-драйвер и доступен порт.",
-                "Ошибка печати",
+                L.T("Проверьте, что принтер включён, выбран ZPL-драйвер и доступен порт."),
+                L.T("Ошибка печати"),
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
         }
@@ -1149,14 +1224,15 @@ public sealed partial class MainForm : Form
 
     private static string PrintStatus(int sent, string printer, string? jobPath)
     {
-        return $"Отправлено этикеток: {sent}. Принтер: {printer}" + JobStatusSuffix(jobPath);
+        return L.F("Отправлено этикеток: {0}. Принтер: {1}", sent, printer) +
+               JobStatusSuffix(jobPath);
     }
 
     private static string JobStatusSuffix(string? jobPath)
     {
         return string.IsNullOrWhiteSpace(jobPath)
             ? ""
-            : " · Задание: " + Path.GetFileName(jobPath);
+            : L.F(" · Задание: {0}", Path.GetFileName(jobPath));
     }
 
     private void DoPrint(
@@ -1198,7 +1274,7 @@ public sealed partial class MainForm : Form
             foreach (var index in indices)
             {
                 if (index < 0 || index >= _file.Codes.Count)
-                    throw new ArgumentOutOfRangeException(nameof(indices), "Некорректный номер кода.");
+                    throw new ArgumentOutOfRangeException(nameof(indices), L.T("Некорректный номер кода."));
 
                 for (var copy = 0; copy < copies; copy++)
                 {
@@ -1229,16 +1305,16 @@ public sealed partial class MainForm : Form
                 }
             }
 
-            job?.Finish($"Успешно отправлено: {result.Sent} из {total}");
+            job?.Finish(L.F("Успешно отправлено: {0} из {1}", result.Sent, total));
         }
         catch (OperationCanceledException)
         {
-            job?.Finish($"Печать отменена. Отправлено: {result.Sent} из {total}");
+            job?.Finish(L.F("Печать отменена. Отправлено: {0} из {1}", result.Sent, total));
             throw;
         }
         catch (Exception ex)
         {
-            job?.Finish($"Ошибка печати: {ex.Message}");
+            job?.Finish(L.F("Ошибка печати: {0}", ex.Message));
             throw;
         }
         finally
@@ -1251,7 +1327,7 @@ public sealed partial class MainForm : Form
     {
         if (_file is null)
         {
-            MessageBox.Show(this, "Сначала откройте файл с кодами.", "ZPL",
+            MessageBox.Show(this, L.T("Сначала откройте файл с кодами."), "ZPL",
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
@@ -1264,8 +1340,8 @@ public sealed partial class MainForm : Form
 
             using var dialog = new SaveFileDialog
             {
-                Title = "Сохранить ZPL",
-                Filter = "ZPL (*.zpl)|*.zpl|Все файлы (*.*)|*.*",
+                Title = L.T("Сохранить ZPL"),
+                Filter = L.T("ZPL (*.zpl)|*.zpl|Все файлы (*.*)|*.*"),
                 DefaultExt = "zpl",
                 AddExtension = true,
                 FileName = $"label_{_codeIndex + 1:D3}.zpl"
@@ -1279,14 +1355,15 @@ public sealed partial class MainForm : Form
                 return;
 
             File.WriteAllText(dialog.FileName, zpl, new UTF8Encoding(false));
-            _statusLabel.Text = "ZPL сохранён: " + dialog.FileName;
+            _statusLabel.Text = L.F("ZPL сохранён: {0}", dialog.FileName);
             _statusLabel.ForeColor = Color.FromArgb(60, 110, 70);
             _toolTip.SetToolTip(_statusStrip, dialog.FileName);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, "Не удалось сохранить ZPL." + Environment.NewLine + Environment.NewLine + ex.Message,
-                "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(this,
+                L.T("Не удалось сохранить ZPL.") + Environment.NewLine + Environment.NewLine + ex.Message,
+                L.T("Ошибка"), MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 

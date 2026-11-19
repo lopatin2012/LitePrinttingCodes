@@ -14,7 +14,7 @@ public static class DataMatrixEncoder
     public static BitMatrix Encode(string rawGs1)
     {
         if (string.IsNullOrWhiteSpace(rawGs1))
-            throw new ArgumentException("Пустой код DataMatrix.", nameof(rawGs1));
+            throw new ArgumentException(L.T("Пустой код DataMatrix."), nameof(rawGs1));
 
         var hints = new Dictionary<EncodeHintType, object>
         {
@@ -33,12 +33,13 @@ public static class DataMatrixEncoder
             hints: hints);
 
         if (matrix.Width != matrix.Height)
-            throw new InvalidOperationException(
-                $"Получился неквадратный DataMatrix {matrix.Width}×{matrix.Height}.");
+            throw new InvalidOperationException(L.F(
+                "Получился неквадратный DataMatrix {0}×{1}.", matrix.Width, matrix.Height));
 
         if (matrix.Width > 144)
-            throw new InvalidOperationException(
-                $"Слишком большой DataMatrix ({matrix.Width}×{matrix.Height}). Максимум — 144×144.");
+            throw new InvalidOperationException(L.F(
+                "Слишком большой DataMatrix ({0}×{1}). Максимум — 144×144.",
+                matrix.Width, matrix.Height));
 
         return matrix;
     }
