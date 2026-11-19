@@ -1,0 +1,22 @@
+GS1 Label Printer
+=================
+
+This application uses the following third-party components:
+
+1. ZXing.Net 0.16.11
+   Copyright 2012-2024 ZXing.Net contributors.
+   Licensed under the Apache License, Version 2.0.
+   Project: https://github.com/micjahn/ZXing.Net
+   License text: LICENSES/Apache-2.0.txt
+
+2. .NET 9 runtime and Windows Forms (bundled into the self-contained executable)
+   Copyright (c) .NET Foundation and Contributors.
+   Licensed under the MIT License.
+   Project: https://github.com/dotnet/runtime
+   Project: https://github.com/dotnet/winforms
+   License text: LICENSES/MIT-dotnet.txt
+
+The application itself is licensed under the MIT License; see LICENSE.
+It is an independent tool and is not affiliated with Zebra Technologies
+or GS1 AISBL. Zebra, ZDesigner and ZD421 are trademarks of their respective
+owners. GS1 is a trademark of GS1 AISBL.

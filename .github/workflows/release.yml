@@ -1,0 +1,54 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Build self-contained executable
+        shell: pwsh
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File ./build.ps1
+
+      - name: Self-test
+        shell: pwsh
+        run: |
+          & .\dist\GS1LabelPrinter.exe --selftest .\samples
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: SHA256 checksum
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash -Algorithm SHA256 -Path .\dist\GS1LabelPrinter.exe).Hash
+          "$hash  GS1LabelPrinter.exe" | Set-Content -Encoding ascii .\dist\SHA256SUMS.txt
+
+      - name: Create GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create $env:GITHUB_REF_NAME `
+            .\dist\GS1LabelPrinter.exe `
+            .\dist\SHA256SUMS.txt `
+            .\dist\README.md `
+            .\dist\LICENSE `
+            .\dist\THIRD-PARTY-NOTICES.txt `
+            .\dist\CHANGELOG.md `
+            .\dist\LICENSES\Apache-2.0.txt `
+            .\dist\LICENSES\MIT-dotnet.txt `
+            --title "GS1 Label Printer $($env:GITHUB_REF_NAME)" `
+            --generate-notes

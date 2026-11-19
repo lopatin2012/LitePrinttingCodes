@@ -1,0 +1,28 @@
+# Build output
+[Bb]in/
+[Oo]bj/
+dist/
+artifacts/
+publish/
+.vs/
+.idea/
+
+# User / IDE files
+*.user
+*.suo
+*.tmp
+*.bak
+
+# Real production data (must not be published)
+local-data/
+DataMatrixGS1_*.txt
+!samples/DataMatrixGS1_*.txt
+
+# Local test output
+selftest.log
+selftest_*.zpl
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
