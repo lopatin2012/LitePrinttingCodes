@@ -15,8 +15,11 @@ public sealed partial class MainForm : Form
     private StatusStrip _statusStrip = null!;
     private ToolStripStatusLabel _statusLabel = null!;
     private LabelPreviewControl _preview = null!;
+    private Panel _settingsPanel = null!;
+    private TableLayoutPanel _settingsTable = null!;
 
     private ComboBox _languageCombo = null!;
+    private ComboBox _printModeCombo = null!;
     private ComboBox _printerCombo = null!;
     private Button _refreshPrintersButton = null!;
     private Label _printerInfoLabel = null!;
@@ -31,7 +34,6 @@ public sealed partial class MainForm : Form
     private Button _openFileButton = null!;
     private Label _filePathLabel = null!;
     private TextBox _productTextBox = null!;
-    private Label _fileInfoLabel = null!;
 
     private NumericUpDown _widthNumeric = null!;
     private NumericUpDown _heightNumeric = null!;
@@ -302,6 +304,13 @@ public sealed partial class MainForm : Form
             var languageIndex = Array.IndexOf(L.AllLanguages, L.Current);
             _languageCombo.SelectedIndex = languageIndex >= 0 ? languageIndex : 0;
 
+            _printModeCombo.SelectedIndex = _settings.PrintMode switch
+            {
+                "zpl" => 1,
+                "graphics" => 2,
+                _ => 0
+            };
+
             _preview.ZoomPercent = _settings.PreviewZoomPercent;
         }
         finally
@@ -340,7 +349,16 @@ public sealed partial class MainForm : Form
                 if (index < 0)
                     index = printers.FindIndex(p => p.Contains("ZD421", StringComparison.OrdinalIgnoreCase));
 
-                // Если ZD421 не найден, выбираем только явно «этикеточный» ZPL-драйвер,
+                // TSC DA220 и другие TSC: печать через Windows-драйвер (графика).
+                if (index < 0)
+                {
+                    index = printers.FindIndex(p =>
+                        p.Contains("TSC", StringComparison.OrdinalIgnoreCase) ||
+                        p.Contains("DA220", StringComparison.OrdinalIgnoreCase) ||
+                        p.Contains("TSPL", StringComparison.OrdinalIgnoreCase));
+                }
+
+                // Если ZD421/TSC не найден, выбираем только явно «этикеточный» ZPL-драйвер,
                 // но не обычный офисный принтер по умолчанию.
                 if (index < 0)
                 {
@@ -371,19 +389,66 @@ public sealed partial class MainForm : Form
         UpdateUiState();
     }
 
+    private string EffectivePrintMode
+    {
+        get
+        {
+            if (_settings.PrintMode is "zpl" or "graphics")
+                return _settings.PrintMode;
+
+            var printer = SelectedPrinter;
+            if (string.IsNullOrWhiteSpace(printer))
+                return "zpl";
+
+            if (printer.Contains("TSC", StringComparison.OrdinalIgnoreCase) ||
+                printer.Contains("DA220", StringComparison.OrdinalIgnoreCase) ||
+                printer.Contains("TSPL", StringComparison.OrdinalIgnoreCase))
+            {
+                return "graphics";
+            }
+
+            if (printer.Contains("Zebra", StringComparison.OrdinalIgnoreCase) ||
+                printer.Contains("ZDesigner", StringComparison.OrdinalIgnoreCase) ||
+                printer.Contains("ZPL", StringComparison.OrdinalIgnoreCase) ||
+                printer.Contains("ZD421", StringComparison.OrdinalIgnoreCase))
+            {
+                return "zpl";
+            }
+
+            return "graphics";
+        }
+    }
+
     private void UpdatePrinterInfo()
     {
         var printer = SelectedPrinter;
         if (printer is null)
         {
             _printerInfoLabel.Text = L.T(
-                "Принтер не выбран. Установите драйвер ZDesigner ZD421 (ZPL) и нажмите «Обновить».");
+                "Принтер не выбран. Установите драйвер принтера и нажмите «Обновить».");
             _printerInfoLabel.ForeColor = Color.FromArgb(180, 50, 40);
             return;
         }
 
-        _printerInfoLabel.Text = L.F("RAW-задание ZPL → {0}", printer);
+        _printerInfoLabel.Text = EffectivePrintMode == "zpl"
+            ? L.F("RAW-задание ZPL → {0}", printer)
+            : L.F("Windows-графика → {0}", printer);
         _printerInfoLabel.ForeColor = Color.FromArgb(80, 120, 85);
+    }
+
+    private void PrintModeCombo_SelectedIndexChanged(object? sender, EventArgs e)
+    {
+        if (_updatingUi)
+            return;
+
+        _settings.PrintMode = _printModeCombo.SelectedIndex switch
+        {
+            1 => "zpl",
+            2 => "graphics",
+            _ => "auto"
+        };
+        _settingsDirty = true;
+        UpdatePrinterInfo();
     }
 
     private void SaveJobCheck_CheckedChanged(object? sender, EventArgs e)
@@ -500,6 +565,24 @@ public sealed partial class MainForm : Form
         {
             LoadFile(_settings.LastFilePath, silent: true);
         }
+
+        BeginInvoke(new Action(RelayoutSettings));
+    }
+
+    private void RelayoutSettings()
+    {
+        _settingsPanel.PerformLayout();
+        _settingsTable.PerformLayout();
+
+        foreach (Control group in _settingsTable.Controls)
+        {
+            group.PerformLayout();
+            foreach (Control child in group.Controls)
+                child.PerformLayout();
+        }
+
+        _settingsPanel.PerformLayout();
+        PerformLayout();
     }
 
     private void MainForm_FormClosing(object? sender, FormClosingEventArgs e)
@@ -600,11 +683,6 @@ public sealed partial class MainForm : Form
             {
                 _productTextBox.Text = label;
                 _filePathLabel.Text = parsed.FileName;
-                _fileInfoLabel.Text = BuildFileInfo(parsed);
-                _toolTip.SetToolTip(_fileInfoLabel, _fileInfoLabel.Text);
-                _fileInfoLabel.ForeColor = parsed.DeclaredQuantity == parsed.Codes.Count
-                    ? Color.FromArgb(100, 110, 124)
-                    : Color.FromArgb(185, 95, 20);
                 _codeIndexNumeric.Maximum = Math.Max(1, parsed.Codes.Count);
                 _codeIndexNumeric.Value = 1;
                 _codeCountLabel.Text = L.F("из {0}", parsed.Codes.Count);
@@ -614,7 +692,8 @@ public sealed partial class MainForm : Form
                 _updatingUi = false;
             }
 
-            _toolTip.SetToolTip(_filePathLabel, parsed.FilePath);
+            _toolTip.SetToolTip(_filePathLabel,
+                parsed.FilePath + Environment.NewLine + BuildFileInfo(parsed));
             _settings.LastFilePath = parsed.FilePath;
             _settingsDirty = true;
             Text = L.F("Печать GS1 DataMatrix — {0}", parsed.FileName);
@@ -981,7 +1060,7 @@ public sealed partial class MainForm : Form
         if (!hasPrinter)
         {
             _printHintLabel.Text = L.T(
-                "Принтер не выбран. Установите ZDesigner ZD421 (ZPL), затем нажмите «Обновить».");
+                "Принтер не выбран. Установите драйвер принтера и нажмите «Обновить».");
             _printHintLabel.ForeColor = Color.FromArgb(180, 50, 40);
         }
         else if (!hasFile)
@@ -1079,7 +1158,7 @@ public sealed partial class MainForm : Form
         MessageBox.Show(
             this,
             L.T("Принтер не выбран.") + Environment.NewLine + Environment.NewLine +
-            L.T("Установите драйвер ZDesigner ZD421 (ZPL), затем нажмите «Обновить» в разделе «Принтер»."),
+            L.T("Установите драйвер принтера, затем нажмите «Обновить» в разделе «Принтер»."),
             L.T("Принтер"),
             MessageBoxButtons.OK,
             MessageBoxIcon.Warning);
@@ -1160,7 +1239,7 @@ public sealed partial class MainForm : Form
                 this,
                 L.T("Не удалось отправить данные на принтер.") + Environment.NewLine + Environment.NewLine +
                 outcome.Error.Message + jobLine + Environment.NewLine + Environment.NewLine +
-                L.T("Проверьте, что принтер включён, выбран ZPL-драйвер и доступен порт.") +
+                L.T("Проверьте, что принтер включён, выбран правильный драйвер и доступен порт.") +
                 Environment.NewLine +
                 L.F("Уже отправлено этикеток: {0} из {1}.", sent, total),
                 L.T("Ошибка печати"),
@@ -1208,7 +1287,7 @@ public sealed partial class MainForm : Form
                 this,
                 L.T("Не удалось отправить данные на принтер.") + Environment.NewLine + Environment.NewLine +
                 ex.Message + jobLine + Environment.NewLine + Environment.NewLine +
-                L.T("Проверьте, что принтер включён, выбран ZPL-драйвер и доступен порт."),
+                L.T("Проверьте, что принтер включён, выбран правильный драйвер и доступен порт."),
                 L.T("Ошибка печати"),
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
@@ -1251,10 +1330,6 @@ public sealed partial class MainForm : Form
         var total = indices.Count * copies;
 
         JobFileWriter? job = null;
-        var prepared = 0;
-        var inChunk = 0;
-        var chunkCodes = new List<string>(20);
-        using var buffer = new MemoryStream(256 * 1024);
 
         try
         {
@@ -1271,38 +1346,13 @@ public sealed partial class MainForm : Form
                 result.JobPath = job.FilePath;
             }
 
-            foreach (var index in indices)
+            if (EffectivePrintMode == "graphics")
             {
-                if (index < 0 || index >= _file.Codes.Count)
-                    throw new ArgumentOutOfRangeException(nameof(indices), L.T("Некорректный номер кода."));
-
-                for (var copy = 0; copy < copies; copy++)
-                {
-                    token.ThrowIfCancellationRequested();
-
-                    using var label = LabelRenderer.Build(_file, index, product, S);
-                    var zpl = Encoding.UTF8.GetBytes(label.BuildZpl(S));
-                    buffer.Write(zpl, 0, zpl.Length);
-                    chunkCodes.Add(label.RawCode);
-
-                    prepared++;
-                    inChunk++;
-
-                    if (inChunk >= 20 || prepared == total)
-                    {
-                        token.ThrowIfCancellationRequested();
-                        RawPrinter.SendRaw(printer, buffer.ToArray(), "GS1 DataMatrix");
-
-                        result.Sent += chunkCodes.Count;
-                        job?.AppendSent(chunkCodes);
-
-                        buffer.SetLength(0);
-                        chunkCodes.Clear();
-                        inChunk = 0;
-                    }
-
-                    progress?.Report(prepared);
-                }
+                PrintGraphics(indices, copies, product, printer, total, job, result, progress, token);
+            }
+            else
+            {
+                PrintZpl(indices, copies, product, printer, total, job, result, progress, token);
             }
 
             job?.Finish(L.F("Успешно отправлено: {0} из {1}", result.Sent, total));
@@ -1320,6 +1370,116 @@ public sealed partial class MainForm : Form
         finally
         {
             job?.Dispose();
+        }
+    }
+
+    private void PrintZpl(
+        IReadOnlyList<int> indices,
+        int copies,
+        string product,
+        string printer,
+        int total,
+        JobFileWriter? job,
+        PrintResult result,
+        IProgress<int>? progress,
+        CancellationToken token)
+    {
+        if (_file is null)
+            return;
+
+        var prepared = 0;
+        var inChunk = 0;
+        var chunkCodes = new List<string>(20);
+        using var buffer = new MemoryStream(256 * 1024);
+
+        foreach (var index in indices)
+        {
+            if (index < 0 || index >= _file.Codes.Count)
+                throw new ArgumentOutOfRangeException(nameof(indices), L.T("Некорректный номер кода."));
+
+            for (var copy = 0; copy < copies; copy++)
+            {
+                token.ThrowIfCancellationRequested();
+
+                using var label = LabelRenderer.Build(_file, index, product, S);
+                var zpl = Encoding.UTF8.GetBytes(label.BuildZpl(S));
+                buffer.Write(zpl, 0, zpl.Length);
+                chunkCodes.Add(label.RawCode);
+
+                prepared++;
+                inChunk++;
+
+                if (inChunk >= 20 || prepared == total)
+                {
+                    token.ThrowIfCancellationRequested();
+                    RawPrinter.SendRaw(printer, buffer.ToArray(), "GS1 DataMatrix");
+
+                    result.Sent += chunkCodes.Count;
+                    job?.AppendSent(chunkCodes);
+
+                    buffer.SetLength(0);
+                    chunkCodes.Clear();
+                    inChunk = 0;
+                }
+
+                progress?.Report(prepared);
+            }
+        }
+    }
+
+    private void PrintGraphics(
+        IReadOnlyList<int> indices,
+        int copies,
+        string product,
+        string printer,
+        int total,
+        JobFileWriter? job,
+        PrintResult result,
+        IProgress<int>? progress,
+        CancellationToken token)
+    {
+        if (_file is null)
+            return;
+
+        const int chunkSize = 10;
+        var prepared = 0;
+        var chunk = new List<LabelRenderResult>(chunkSize);
+
+        try
+        {
+            foreach (var index in indices)
+            {
+                if (index < 0 || index >= _file.Codes.Count)
+                    throw new ArgumentOutOfRangeException(nameof(indices), L.T("Некорректный номер кода."));
+
+                for (var copy = 0; copy < copies; copy++)
+                {
+                    token.ThrowIfCancellationRequested();
+
+                    chunk.Add(LabelRenderer.Build(_file, index, product, S));
+                    prepared++;
+
+                    if (chunk.Count >= chunkSize || prepared == total)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        GdiLabelPrinter.Print(printer, chunk, S, token);
+
+                        result.Sent += chunk.Count;
+                        job?.AppendSent(chunk.Select(x => x.RawCode).ToList());
+
+                        foreach (var label in chunk)
+                            label.Dispose();
+                        chunk.Clear();
+
+                        progress?.Report(prepared);
+                    }
+                }
+            }
+        }
+        finally
+        {
+            foreach (var label in chunk)
+                label.Dispose();
         }
     }
 

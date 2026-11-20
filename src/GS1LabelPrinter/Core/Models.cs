@@ -54,6 +54,7 @@ public sealed class AppSettings
     public string? PrinterName { get; set; }
     public string? LastFilePath { get; set; }
     public string Language { get; set; } = "";
+    public string PrintMode { get; set; } = "auto";
     public bool AutoLoadLastFile { get; set; } = true;
     public int PreviewZoomPercent { get; set; } = 0;
 

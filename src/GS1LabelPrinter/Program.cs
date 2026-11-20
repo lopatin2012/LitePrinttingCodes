@@ -19,6 +19,28 @@ internal static class Program
             return;
         }
 
+        if (args.Length >= 3 && args[0].Equals("--print-test", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var diagnosticSettings = SettingsStore.Load();
+                L.Current = L.Parse(diagnosticSettings.Language);
+                var file = CodeFileParser.Load(args[2]);
+                var product = CodeFileParser.MakeShortProductName(file.FullProductName);
+                using var label = LabelRenderer.Build(file, 0, product, diagnosticSettings.Label);
+                GdiLabelPrinter.Print(args[1], new[] { label }, diagnosticSettings.Label);
+                File.WriteAllText("print-test.log", "OK: " + args[1] + Environment.NewLine);
+                Environment.ExitCode = 0;
+            }
+            catch (Exception ex)
+            {
+                File.WriteAllText("print-test.log", ex.ToString());
+                Environment.ExitCode = 1;
+            }
+
+            return;
+        }
+
         ApplicationConfiguration.Initialize();
 
         Application.ThreadException += (_, e) =>

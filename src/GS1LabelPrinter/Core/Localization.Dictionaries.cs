@@ -32,6 +32,20 @@ public static partial class L
         ["Полный путь к выбранному файлу"] = "Full path to the selected file",
 
         ["Принтер"] = "Printer",
+        ["Способ печати"] = "Print method",
+        ["Авто"] = "Auto",
+        ["Windows (графика)"] = "Windows (graphics)",
+        ["Авто: Zebra — ZPL, TSC и другие — печать через Windows-драйвер (графика)."] =
+            "Auto: Zebra uses ZPL; TSC and others use the Windows driver (graphics).",
+        ["Выберите принтер. Для Zebra используется ZPL, для TSC и других — Windows-графика."] =
+            "Select a printer. Zebra uses ZPL; TSC and others use Windows graphics.",
+        ["Windows-графика → {0}"] = "Windows graphics → {0}",
+        ["Принтер не выбран. Установите драйвер принтера и нажмите «Обновить»."] =
+            "Printer is not selected. Install the printer driver and click “Refresh”.",
+        ["Установите драйвер принтера, затем нажмите «Обновить» в разделе «Принтер»."] =
+            "Install the printer driver, then click “Refresh” in the Printer section.",
+        ["Принтер недоступен: {0}"] = "Printer is unavailable: {0}",
+        ["Драйвер не напечатал все этикетки."] = "The driver did not print all labels.",
         ["Обновить"] = "Refresh",
         ["Выберите принтер Zebra. Данные отправляются как RAW-задание ZPL."] =
             "Select a Zebra printer. Data is sent as a raw ZPL job.",
@@ -145,6 +159,8 @@ public static partial class L
         ["Не удалось отправить данные на принтер."] = "Could not send data to the printer.",
         ["Проверьте, что принтер включён, выбран ZPL-драйвер и доступен порт."] =
             "Check that the printer is on, the ZPL driver is selected and the port is available.",
+        ["Проверьте, что принтер включён, выбран правильный драйвер и доступен порт."] =
+            "Check that the printer is on, the correct driver is selected and the port is available.",
         ["Уже отправлено этикеток: {0} из {1}."] = "Labels already sent: {0} of {1}.",
         ["Ошибка печати"] = "Print error",
         ["Ошибка печати."] = "Print error.",
@@ -249,6 +265,20 @@ public static partial class L
         ["Полный путь к выбранному файлу"] = "所选文件的完整路径",
 
         ["Принтер"] = "打印机",
+        ["Способ печати"] = "打印方式",
+        ["Авто"] = "自动",
+        ["Windows (графика)"] = "Windows（图像）",
+        ["Авто: Zebra — ZPL, TSC и другие — печать через Windows-драйвер (графика)."] =
+            "自动：Zebra 使用 ZPL；TSC 等其他打印机使用 Windows 驱动（图像）。",
+        ["Выберите принтер. Для Zebra используется ZPL, для TSC и других — Windows-графика."] =
+            "选择打印机。Zebra 使用 ZPL，TSC 等其他打印机使用 Windows 图像打印。",
+        ["Windows-графика → {0}"] = "Windows 图像 → {0}",
+        ["Принтер не выбран. Установите драйвер принтера и нажмите «Обновить»."] =
+            "未选择打印机。请安装打印机驱动并点击“刷新”。",
+        ["Установите драйвер принтера, затем нажмите «Обновить» в разделе «Принтер»."] =
+            "请安装打印机驱动，然后在“打印机”部分点击“刷新”。",
+        ["Принтер недоступен: {0}"] = "打印机不可用：{0}",
+        ["Драйвер не напечатал все этикетки."] = "驱动未能打印全部标签。",
         ["Обновить"] = "刷新",
         ["Выберите принтер Zebra. Данные отправляются как RAW-задание ZPL."] =
             "选择 Zebra 打印机。数据以 RAW ZPL 任务发送。",
@@ -360,6 +390,8 @@ public static partial class L
         ["Не удалось отправить данные на принтер."] = "无法将数据发送到打印机。",
         ["Проверьте, что принтер включён, выбран ZPL-драйвер и доступен порт."] =
             "请检查打印机已开启、已选择 ZPL 驱动且端口可用。",
+        ["Проверьте, что принтер включён, выбран правильный драйвер и доступен порт."] =
+            "请检查打印机已开启、已选择正确的驱动且端口可用。",
         ["Уже отправлено этикеток: {0} из {1}."] = "已发送标签：{0} / {1}。",
         ["Ошибка печати"] = "打印错误",
         ["Ошибка печати."] = "打印错误。",

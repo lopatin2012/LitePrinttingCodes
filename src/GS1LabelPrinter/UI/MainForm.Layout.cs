@@ -270,6 +270,8 @@ public sealed partial class MainForm
         }
 
         panel.Controls.Add(table);
+        _settingsPanel = panel;
+        _settingsTable = table;
         return panel;
     }
 
@@ -307,7 +309,7 @@ public sealed partial class MainForm
     private GroupBox BuildFileGroup()
     {
         var group = MakeGroup("Файл с кодами");
-        var table = MakeTable(6, 2, 58, 42);
+        var table = MakeTable(5, 2, 58, 42);
 
         _openFileButton = MakeButton("Открыть файл…", OpenFile_Click, 165);
         table.Controls.Add(_openFileButton, 0, 0);
@@ -347,15 +349,6 @@ public sealed partial class MainForm
         table.Controls.Add(_productTextBox, 0, 4);
         table.SetColumnSpan(_productTextBox, 2);
 
-        _fileInfoLabel = MutedLabel("");
-        _fileInfoLabel.AutoSize = false;
-        _fileInfoLabel.AutoEllipsis = true;
-        _fileInfoLabel.Height = 22;
-        _fileInfoLabel.Dock = DockStyle.Fill;
-        _toolTip.SetToolTip(_fileInfoLabel, "");
-        table.Controls.Add(_fileInfoLabel, 0, 5);
-        table.SetColumnSpan(_fileInfoLabel, 2);
-
         group.Controls.Add(table);
         return group;
     }
@@ -363,7 +356,26 @@ public sealed partial class MainForm
     private GroupBox BuildPrinterGroup()
     {
         var group = MakeGroup("Принтер");
-        var table = MakeTable(2, 2, 76, 24);
+        var table = MakeTable(3, 2, 76, 24);
+
+        table.Controls.Add(FieldLabel("Способ печати"), 0, 0);
+
+        _printModeCombo = new ComboBox
+        {
+            Dock = DockStyle.Fill,
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            Margin = new Padding(0, 4, 0, 4)
+        };
+        _printModeCombo.Items.AddRange(new object[]
+        {
+            L.T("Авто"),
+            "ZPL (RAW)",
+            L.T("Windows (графика)")
+        });
+        _printModeCombo.SelectedIndexChanged += PrintModeCombo_SelectedIndexChanged;
+        _toolTip.SetToolTip(_printModeCombo, L.T(
+            "Авто: Zebra — ZPL, TSC и другие — печать через Windows-драйвер (графика)."));
+        table.Controls.Add(_printModeCombo, 1, 0);
 
         _printerCombo = new ComboBox
         {
@@ -373,17 +385,17 @@ public sealed partial class MainForm
         };
         _printerCombo.SelectedIndexChanged += PrinterCombo_SelectedIndexChanged;
         _toolTip.SetToolTip(_printerCombo, L.T(
-            "Выберите принтер Zebra. Данные отправляются как RAW-задание ZPL."));
-        table.Controls.Add(_printerCombo, 0, 0);
+            "Выберите принтер. Для Zebra используется ZPL, для TSC и других — Windows-графика."));
+        table.Controls.Add(_printerCombo, 0, 1);
 
         _refreshPrintersButton = MakeButton("Обновить", RefreshPrinters_Click);
-        table.Controls.Add(_refreshPrintersButton, 1, 0);
+        table.Controls.Add(_refreshPrintersButton, 1, 1);
 
         _printerInfoLabel = MutedLabel("Данные уходят напрямую в драйвер ZPL (RAW).");
         _printerInfoLabel.AutoSize = false;
         _printerInfoLabel.Height = 32;
         _printerInfoLabel.Dock = DockStyle.Fill;
-        table.Controls.Add(_printerInfoLabel, 0, 1);
+        table.Controls.Add(_printerInfoLabel, 0, 2);
         table.SetColumnSpan(_printerInfoLabel, 2);
 
         group.Controls.Add(table);
@@ -707,7 +719,7 @@ public sealed partial class MainForm
             Dock = DockStyle.Fill,
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            Padding = new Padding(10, 6, 10, 10),
+            Padding = new Padding(10, 6, 10, 28),
             Margin = new Padding(0, 0, 0, 10)
         };
     }

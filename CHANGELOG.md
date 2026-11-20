@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.3.0 — 2026-11-20
+
+- Added USB printing for **TSC DA220** and other non-ZPL printers through the
+  Windows driver (GDI graphics). ZPL printing for Zebra remains available.
+- Added print-method selector: **Auto / ZPL (RAW) / Windows (graphics)**.
+  Auto uses ZPL for Zebra and Windows graphics for TSC/other printers.
+- TSC printers are auto-selected when no ZD421 is present.
+- A GDI print path renders the complete label (DataMatrix + text) at the
+  configured label size and sends it via the installed Windows driver.
+- Confirmed a real test print on a TSC DA220 test queue.
+- Localized the new print-method UI in Russian, English and Chinese.
+
 ## 1.2.0 — 2026-11-19
 
 - Added interface languages: Russian, English and Simplified Chinese.

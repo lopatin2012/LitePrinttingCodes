@@ -58,6 +58,13 @@ public static class SettingsStore
         else
             settings.Language = L.ToCode(L.Parse(settings.Language));
 
+        settings.PrintMode = settings.PrintMode?.Trim().ToLowerInvariant() switch
+        {
+            "zpl" => "zpl",
+            "graphics" => "graphics",
+            _ => "auto"
+        };
+
         if (string.IsNullOrWhiteSpace(settings.JobFolder))
             settings.JobFolder = AppData.DefaultJobFolder;
 
